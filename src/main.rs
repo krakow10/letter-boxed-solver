@@ -9,6 +9,11 @@ impl LetterMap{
 		}
 	}
 }
+
+struct Puzzle{
+	sides:[[u8;3];4],
+}
+
 fn main() {
 	const WORDS:&str=include_str!("words.txt");
 	let mut word_map=LetterMap::new();
@@ -35,4 +40,13 @@ fn main() {
 		}
 		word_count+=1;
 	}
+
+	let todays_puzzle=Puzzle{
+		sides:[
+			[b'g',b'j',b'h'],
+			[b'n',b'v',b'y'],
+			[b'd',b'i',b'e'],
+			[b'p',b'r',b'o'],
+		],
+	};
 }
