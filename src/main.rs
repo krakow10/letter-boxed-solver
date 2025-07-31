@@ -49,4 +49,33 @@ fn main() {
 			[b'p',b'r',b'o'],
 		],
 	};
+
+	struct PuzzleIter{
+		puzzle:Puzzle,
+		index:usize,
+	};
+	impl PuzzleIter{
+		fn new(puzzle:Puzzle)->Self{
+			Self{
+				puzzle,
+				index:0,
+			}
+		}
+	}
+	impl Iterator for PuzzleIter{
+		type Item=u8;
+		fn next(&mut self)->Option<Self::Item>{
+			if self.index<12{
+				let value=self.puzzle.sides[self.index as usize/3][(self.index as usize).rem_euclid(3)];
+				self.index+=1;
+				Some(value)
+			}else{
+				None
+			}
+		}
+	}
+
+	for letter in PuzzleIter::new(todays_puzzle){
+		println!("{}",letter as char);
+	}
 }
