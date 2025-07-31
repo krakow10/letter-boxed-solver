@@ -206,4 +206,7 @@ fn main() {
 	println!("find valid words: {time_find_valid_words:?}");
 	println!("find solutions: {time_find_solutions:?}");
 	println!("total elapsed: {time_total:?}");
+	for [word1,word2] in solutions{
+		println!("{word1} - {word2}");
+	}
 }
