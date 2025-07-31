@@ -43,6 +43,9 @@ fn main() {
 		letter_map[TERMINATOR].replace(Box::new(LetterMap::new()));
 	}
 
+	let time_generate_word_map=start_time.elapsed();
+	let time_1=std::time::Instant::now();
+
 	// println!("{count} in {:?}",start_time.elapsed());
 	// println!("total words = {word_count}");
 
@@ -149,6 +152,9 @@ fn main() {
 		}
 	}
 
+	let time_find_valid_words=time_1.elapsed();
+	let time_2=std::time::Instant::now();
+
 	// print out all the words
 	// for word_list in &valid_words.starting_letter{
 	// 	for word in word_list{
@@ -193,5 +199,11 @@ fn main() {
 		}
 	}
 
-	println!("total elapsed: {:?}",start_time.elapsed());
+	let time_find_solutions=time_2.elapsed();
+	let time_total=start_time.elapsed();
+
+	println!("generate word tree: {time_generate_word_map:?}");
+	println!("find valid words: {time_find_valid_words:?}");
+	println!("find solutions: {time_find_solutions:?}");
+	println!("total elapsed: {time_total:?}");
 }
