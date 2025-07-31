@@ -5,7 +5,7 @@ struct LetterMap{
 impl LetterMap{
 	fn new()->Self{
 		LetterMap{
-			next_letter:[None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None],
+			next_letter:core::array::from_fn(|_|None),
 		}
 	}
 }
@@ -18,36 +18,41 @@ fn main() {
 
 	let mut word_map=LetterMap::new();
 
-	let mut count=0;
-	let mut word_count=0;
+	// generate a tree of all words in the dictionary
 	'outer: for word in WORDS.lines(){
 		let mut letter_map=&mut word_map.next_letter;
 		for &letter in word.as_bytes(){
+			// skip words containing non-letters
 			if letter<b'a'||b'z'<letter{
 				continue 'outer;
 			}
-			let index=letter-b'a';
-			if letter_map[index as usize].is_none(){
-				letter_map[index as usize].replace(Box::new(LetterMap::new()));
-				count+=1;
+			let letter_id=(letter-b'a') as usize;
+			// if the letter map does not exist for this letter,
+			// make it, since we just came across a sample word.
+			if letter_map[letter_id].is_none(){
+				letter_map[letter_id].replace(Box::new(LetterMap::new()));
 			}
-			letter_map=match &mut letter_map[index as usize]{
+
+			// step letter_map into the next letter
+			letter_map=match &mut letter_map[letter_id]{
 				Some(thing)=>&mut thing.next_letter,
-				None=>{
-					panic!("Next letter map just inserted does not exist");
-				}
+				None=>panic!("Next letter map (just inserted) does not exist"),
 			};
 		}
 		// mark the end of a word.
-		letter_map[26].replace(Box::new(LetterMap::new()));
-		word_count+=1;
+		letter_map[TERMINATOR].replace(Box::new(LetterMap::new()));
 	}
 
 	// println!("{count} in {:?}",start_time.elapsed());
 	// println!("total words = {word_count}");
 
 	struct Puzzle{
-		sides:[[char;3];4],
+		sides:[[char;Self::SIDE_WIDTH];Self::SIDES],
+	}
+	impl Puzzle{
+		const SIDES:usize=4;
+		const SIDE_WIDTH:usize=3;
+		const SIZE:usize=Self::SIDES*Self::SIDE_WIDTH;
 	}
 
 	let todays_puzzle=Puzzle{
@@ -62,7 +67,7 @@ fn main() {
 	struct PuzzleIter<'a>{
 		puzzle:&'a Puzzle,
 		index:usize,
-	};
+	}
 	impl<'a> IntoIterator for &'a Puzzle{
 		type IntoIter=PuzzleIter<'a>;
 		type Item=(usize,char);
@@ -76,9 +81,9 @@ fn main() {
 	impl Iterator for PuzzleIter<'_>{
 		type Item=(usize,char);
 		fn next(&mut self)->Option<Self::Item>{
-			if self.index<12{
-				let side=self.index as usize/3;
-				let value=self.puzzle.sides[side][(self.index as usize).rem_euclid(3)];
+			if self.index<Puzzle::SIZE{
+				let side=self.index as usize/Puzzle::SIDE_WIDTH;
+				let value=self.puzzle.sides[side][(self.index as usize).rem_euclid(Puzzle::SIDE_WIDTH)];
 				self.index+=1;
 				Some((side,value))
 			}else{
@@ -109,8 +114,11 @@ fn main() {
 			let letter_id=(letter as u8-b'a') as usize;
 			if let Some(next_letter_map)=&letter_map.next_letter[letter_id]{
 				// adding this letter to the current word can form one or more words.
+
+				// push letter onto the end of the current word
 				current_word.push(letter);
 				add_next_letter(all_words, current_word, puzzle, next_letter_map, side);
+				// remove letter
 				current_word.pop();
 			}
 		}
@@ -124,16 +132,20 @@ fn main() {
 	let mut valid_words=Words{
 		starting_letter:core::array::from_fn(|_|Vec::new()),
 	};
-	for (side,letter) in &todays_puzzle{
-		let letter_id=(letter as u8-b'a') as usize;
-		if let Some(letter_map)=&word_map.next_letter[letter_id]{
-			let letter=(letter_id as u8+b'a') as char;
+
+	// brute force search for all valid words
+	for (side,starting_letter) in &todays_puzzle{
+		let starting_letter_id=(starting_letter as u8-b'a') as usize;
+
+		// this will only be skipped if the dictionary is
+		// missing all words of a specific starting letter
+		if let Some(letter_map)=&word_map.next_letter[starting_letter_id]{
 			let mut all_words=Vec::new();
 			let mut current_word=String::new();
-			current_word.push(letter);
+			current_word.push(starting_letter);
 			add_next_letter(&mut all_words, &mut current_word, &todays_puzzle, letter_map, side);
 			current_word.pop();
-			valid_words.starting_letter[letter_id]=all_words;
+			valid_words.starting_letter[starting_letter_id]=all_words;
 		}
 	}
 
