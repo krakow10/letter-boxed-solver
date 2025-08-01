@@ -12,22 +12,64 @@ impl LetterMap{
 	}
 }
 
-fn main() {
-	const WORDS:&str=include_str!("words.txt");
+pub struct Puzzle{
+	sides:[[char;Self::SIDE_WIDTH];Self::SIDES],
+}
+impl Puzzle{
+	const SIDES:usize=4;
+	const SIDE_WIDTH:usize=3;
+	const SIZE:usize=Self::SIDES*Self::SIDE_WIDTH;
+}
 
-	let start_time=std::time::Instant::now();
+pub struct PuzzleIter<'a>{
+	puzzle:&'a Puzzle,
+	index:usize,
+}
+impl<'a> IntoIterator for &'a Puzzle{
+	type IntoIter=PuzzleIter<'a>;
+	type Item=(usize,char);
+	fn into_iter(self)->Self::IntoIter{
+		PuzzleIter{
+			puzzle:self,
+			index:0,
+		}
+	}
+}
+impl Iterator for PuzzleIter<'_>{
+	type Item=(usize,char);
+	fn next(&mut self)->Option<Self::Item>{
+		if self.index<Puzzle::SIZE{
+			let side=self.index as usize/Puzzle::SIDE_WIDTH;
+			let value=self.puzzle.sides[side][(self.index as usize).rem_euclid(Puzzle::SIDE_WIDTH)];
+			self.index+=1;
+			Some((side,value))
+		}else{
+			None
+		}
+	}
+}
 
+struct Words{
+	starting_letter:[Vec<String>;26],
+}
+fn generate_tree<'a,I:IntoIterator<Item=&'a str>>(dictionary:I)->LetterMap{
 	let mut word_map=LetterMap::new();
 
 	// generate a tree of all words in the dictionary
-	'outer: for word in WORDS.lines(){
+	'outer: for word in dictionary{
 		let mut letter_map=&mut word_map;
 		for &letter in word.as_bytes(){
 			// skip words containing non-letters
-			if letter<b'a'||b'z'<letter{
+			let letter_id;
+			if b'a'<=letter&&letter<=b'z'{
+				// lower case
+				letter_id=(letter-b'a') as usize;
+			}else if b'A'<=letter&&letter<=b'Z'{
+				// upper case
+				letter_id=(letter-b'A') as usize;
+			}else{
 				continue 'outer;
 			}
-			let letter_id=(letter-b'a') as usize;
 			// if the letter map does not exist for this letter,
 			// make it, since we just came across a sample word.
 			if letter_map.next_letter[letter_id].is_none(){
@@ -44,60 +86,9 @@ fn main() {
 		letter_map.is_complete_word=true;
 	}
 
-	let time_generate_word_map=start_time.elapsed();
-	let time_1=std::time::Instant::now();
+	word_map
+}
 
-	// println!("{count} in {:?}",start_time.elapsed());
-	// println!("total words = {word_count}");
-
-	struct Puzzle{
-		sides:[[char;Self::SIDE_WIDTH];Self::SIDES],
-	}
-	impl Puzzle{
-		const SIDES:usize=4;
-		const SIDE_WIDTH:usize=3;
-		const SIZE:usize=Self::SIDES*Self::SIDE_WIDTH;
-	}
-
-	let todays_puzzle=Puzzle{
-		sides:[
-			['g','j','h'],
-			['n','v','y'],
-			['d','i','e'],
-			['p','r','o'],
-		],
-	};
-
-	struct PuzzleIter<'a>{
-		puzzle:&'a Puzzle,
-		index:usize,
-	}
-	impl<'a> IntoIterator for &'a Puzzle{
-		type IntoIter=PuzzleIter<'a>;
-		type Item=(usize,char);
-		fn into_iter(self)->Self::IntoIter{
-			PuzzleIter{
-				puzzle:self,
-				index:0,
-			}
-		}
-	}
-	impl Iterator for PuzzleIter<'_>{
-		type Item=(usize,char);
-		fn next(&mut self)->Option<Self::Item>{
-			if self.index<Puzzle::SIZE{
-				let side=self.index as usize/Puzzle::SIDE_WIDTH;
-				let value=self.puzzle.sides[side][(self.index as usize).rem_euclid(Puzzle::SIDE_WIDTH)];
-				self.index+=1;
-				Some((side,value))
-			}else{
-				None
-			}
-		}
-	}
-
-	// list all valid words
-	// perform a depth first search of the words tree, filtering sides.
 	fn add_next_letter(
 		all_words:&mut Vec<String>,
 		current_word:&mut String,
@@ -128,17 +119,14 @@ fn main() {
 		}
 	}
 
-	struct Words{
-		starting_letter:[Vec<String>;26],
-	}
-
+fn find_valid_words(word_map:&LetterMap,puzzle:&Puzzle)->Words{
 	// initialize an empty list of words
 	let mut valid_words=Words{
 		starting_letter:core::array::from_fn(|_|Vec::new()),
 	};
 
 	// brute force search for all valid words
-	for (side,starting_letter) in &todays_puzzle{
+	for (side,starting_letter) in puzzle{
 		let starting_letter_id=(starting_letter as u8-b'a') as usize;
 
 		// this will only be skipped if the dictionary is
@@ -147,22 +135,16 @@ fn main() {
 			let mut all_words=Vec::new();
 			let mut current_word=String::new();
 			current_word.push(starting_letter);
-			add_next_letter(&mut all_words, &mut current_word, &todays_puzzle, letter_map, side);
+			add_next_letter(&mut all_words, &mut current_word, puzzle, letter_map, side);
 			current_word.pop();
 			valid_words.starting_letter[starting_letter_id]=all_words;
 		}
 	}
 
-	let time_find_valid_words=time_1.elapsed();
-	let time_2=std::time::Instant::now();
+	valid_words
+}
 
-	// print out all the words
-	// for word_list in &valid_words.starting_letter{
-	// 	for word in word_list{
-	// 		println!("{word}");
-	// 	}
-	// }
-
+fn find_solutions<'a>(valid_words:&'a Words,puzzle:&Puzzle)->Vec<[&'a str;2]>{
 	// helper functions
 	fn add_word(solution:&mut [bool;26],word:&str){
 		for &letter in word.as_bytes(){
@@ -180,7 +162,7 @@ fn main() {
 		return true;
 	}
 
-	let mut solutions=Vec::new();
+	let mut solutions:Vec<[&str;2]> =Vec::new();
 
 	// print out all two word solutions
 	for word_list1 in &valid_words.starting_letter{
@@ -193,12 +175,52 @@ fn main() {
 				let mut solution=[false;26];
 				add_word(&mut solution, word1);
 				add_word(&mut solution, word2);
-				if check_solved(&todays_puzzle, solution){
+				if check_solved(puzzle, solution){
 					solutions.push([word1,word2]);
 				}
 			}
 		}
 	}
+
+	solutions
+}
+
+fn main() {
+	const WORDS:&str=include_str!("words.txt");
+
+	let start_time=std::time::Instant::now();
+	let word_map=generate_tree(WORDS.lines());
+
+	let time_generate_word_map=start_time.elapsed();
+	let time_1=std::time::Instant::now();
+
+	// println!("{count} in {:?}",start_time.elapsed());
+	// println!("total words = {word_count}");
+
+	let todays_puzzle=Puzzle{
+		sides:[
+			['g','j','h'],
+			['n','v','y'],
+			['d','i','e'],
+			['p','r','o'],
+		],
+	};
+
+	// list all valid words
+	// perform a depth first search of the words tree, filtering sides.
+	let valid_words=find_valid_words(&word_map,&todays_puzzle);
+
+	let time_find_valid_words=time_1.elapsed();
+	let time_2=std::time::Instant::now();
+
+	// print out all the words
+	// for word_list in &valid_words.starting_letter{
+	// 	for word in word_list{
+	// 		println!("{word}");
+	// 	}
+	// }
+
+	let solutions=find_solutions(&valid_words, &todays_puzzle);
 
 	let time_find_solutions=time_2.elapsed();
 	let time_total=start_time.elapsed();
