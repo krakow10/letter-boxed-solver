@@ -89,35 +89,35 @@ fn generate_tree<'a,I:IntoIterator<Item=&'a str>>(dictionary:I)->LetterMap{
 	word_map
 }
 
-	fn add_next_letter(
-		all_words:&mut Vec<String>,
-		current_word:&mut String,
-		puzzle:&Puzzle,
-		letter_map:&LetterMap,
-		current_side:usize,
-	){
-		// check if current word is a real word
-		if letter_map.is_complete_word{
-			// write that down!!!
-			all_words.push(current_word.clone());
+fn add_next_letter(
+	all_words:&mut Vec<String>,
+	current_word:&mut String,
+	puzzle:&Puzzle,
+	letter_map:&LetterMap,
+	current_side:usize,
+){
+	// check if current word is a real word
+	if letter_map.is_complete_word{
+		// write that down!!!
+		all_words.push(current_word.clone());
+	}
+	for (side,letter) in puzzle{
+		// skip letters on the same side during the search
+		if side==current_side{
+			continue;
 		}
-		for (side,letter) in puzzle{
-			// skip letters on the same side during the search
-			if side==current_side{
-				continue;
-			}
-			let letter_id=(letter as u8-b'a') as usize;
-			if let Some(next_letter_map)=&letter_map.next_letter[letter_id]{
-				// adding this letter to the current word can form one or more words.
+		let letter_id=(letter as u8-b'a') as usize;
+		if let Some(next_letter_map)=&letter_map.next_letter[letter_id]{
+			// adding this letter to the current word can form one or more words.
 
-				// push letter onto the end of the current word
-				current_word.push(letter);
-				add_next_letter(all_words, current_word, puzzle, next_letter_map, side);
-				// remove letter
-				current_word.pop();
-			}
+			// push letter onto the end of the current word
+			current_word.push(letter);
+			add_next_letter(all_words, current_word, puzzle, next_letter_map, side);
+			// remove letter
+			current_word.pop();
 		}
 	}
+}
 
 fn find_valid_words(word_map:&LetterMap,puzzle:&Puzzle)->Words{
 	// initialize an empty list of words
