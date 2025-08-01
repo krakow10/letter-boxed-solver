@@ -1,15 +1,16 @@
 #[derive(Debug,Clone)]
 struct LetterMap{
-	next_letter:[Option<Box<LetterMap>>;27],
+	next_letter:[Option<Box<LetterMap>>;26],
+	is_complete_word:bool,
 }
 impl LetterMap{
 	fn new()->Self{
 		LetterMap{
 			next_letter:core::array::from_fn(|_|None),
+			is_complete_word:false,
 		}
 	}
 }
-const TERMINATOR:usize=26;
 
 fn main() {
 	const WORDS:&str=include_str!("words.txt");
@@ -20,7 +21,7 @@ fn main() {
 
 	// generate a tree of all words in the dictionary
 	'outer: for word in WORDS.lines(){
-		let mut letter_map=&mut word_map.next_letter;
+		let mut letter_map=&mut word_map;
 		for &letter in word.as_bytes(){
 			// skip words containing non-letters
 			if letter<b'a'||b'z'<letter{
@@ -29,18 +30,18 @@ fn main() {
 			let letter_id=(letter-b'a') as usize;
 			// if the letter map does not exist for this letter,
 			// make it, since we just came across a sample word.
-			if letter_map[letter_id].is_none(){
-				letter_map[letter_id].replace(Box::new(LetterMap::new()));
+			if letter_map.next_letter[letter_id].is_none(){
+				letter_map.next_letter[letter_id].replace(Box::new(LetterMap::new()));
 			}
 
 			// step letter_map into the next letter
-			letter_map=match &mut letter_map[letter_id]{
-				Some(thing)=>&mut thing.next_letter,
+			letter_map=match &mut letter_map.next_letter[letter_id]{
+				Some(thing)=>thing,
 				None=>panic!("Next letter map (just inserted) does not exist"),
 			};
 		}
 		// mark the end of a word.
-		letter_map[TERMINATOR].replace(Box::new(LetterMap::new()));
+		letter_map.is_complete_word=true;
 	}
 
 	let time_generate_word_map=start_time.elapsed();
@@ -105,7 +106,7 @@ fn main() {
 		current_side:usize,
 	){
 		// check if current word is a real word
-		if letter_map.next_letter[TERMINATOR].is_some(){
+		if letter_map.is_complete_word{
 			// write that down!!!
 			all_words.push(current_word.clone());
 		}
