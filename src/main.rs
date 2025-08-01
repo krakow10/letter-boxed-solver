@@ -52,6 +52,13 @@ impl Iterator for PuzzleIter<'_>{
 struct Words{
 	starting_letter:[Vec<String>;26],
 }
+impl Words{
+	fn new()->Self{
+		Self{
+			starting_letter:core::array::from_fn(|_|Vec::new()),
+		}
+	}
+}
 fn generate_tree<'a,I:IntoIterator<Item=&'a str>>(dictionary:I)->LetterMap{
 	let mut word_map=LetterMap::new();
 
@@ -121,9 +128,7 @@ fn add_next_letter(
 
 fn find_valid_words(word_map:&LetterMap,puzzle:&Puzzle)->Words{
 	// initialize an empty list of words
-	let mut valid_words=Words{
-		starting_letter:core::array::from_fn(|_|Vec::new()),
-	};
+	let mut valid_words=Words::new();
 
 	// brute force search for all valid words
 	for (side,starting_letter) in puzzle{
