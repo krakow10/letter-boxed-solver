@@ -3,4 +3,12 @@ name = "letter-boxed"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["fetcher"]
+fetcher = ["dep:reqwest","dep:serde","dep:select","dep:serde_json"]
+
 [dependencies]
+reqwest = { version = "0.12.22", optional = true, features = ["blocking"] }
+select = { version = "0.6.1", optional = true }
+serde = { version = "1.0.219", optional = true, features = ["derive"] }
+serde_json = { version = "1.0.142", optional = true }
