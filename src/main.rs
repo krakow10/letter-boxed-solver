@@ -17,7 +17,8 @@ enum Commands{
 	Today(TodayCommand),
 }
 
-/// Print the details for an asset
+/// Fetch today's puzzle and solve it with the specified dictionary.
+/// Uses the official word list if no dictionary is provided.
 #[derive(Args)]
 struct TodayCommand{
 	#[arg(long,short)]
@@ -32,6 +33,13 @@ fn main(){
 
 impl TodayCommand{
 	fn run(self){
+		let dictionary=self.dictionary.map(|file_path|{
+			std::fs::read_to_string(file_path).unwrap()
+		});
+		let words_iter=dictionary.as_ref().map(|dictionary|{
+			dictionary.lines()
+		});
+		fetch_and_solve_with_dictionary(words_iter)
 	}
 }
 
@@ -256,58 +264,37 @@ fn find_solutions<'a>(valid_words:&'a Words,puzzle:&Puzzle)->Vec<[&'a str;2]>{
 	solutions
 }
 
-fn fetch_and_solve_with_dictionary(dictionary:Option<&str>) {
+fn fetch_and_solve_with_dictionary<'a,I:IntoIterator<Item=&'a str>>(dictionary:Option<I>){
+	// fetch puzzle info from website
 	let letter_boxed=fetcher::get_today().unwrap();
-
-	// const WORDS:&str=include_str!("words.txt");
-
-	let start_time=std::time::Instant::now();
-	// let word_map=generate_tree(WORDS.lines());
-
-	let time_generate_word_map=start_time.elapsed();
-	let time_1=std::time::Instant::now();
-
-	// println!("{count} in {:?}",start_time.elapsed());
-	// println!("total words = {word_count}");
 
 	let todays_puzzle=Puzzle::from_sides(letter_boxed.sides);
 
-	// list all valid words
-	// perform a depth first search of the words tree, filtering sides.
-	// let valid_words=find_valid_words(&word_map,&todays_puzzle);
-
-	let time_find_valid_words=time_1.elapsed();
-	let time_2=std::time::Instant::now();
-
-	// print out all the words
-	// for word_list in &valid_words.starting_letter{
-	// 	for word in word_list{
-	// 		println!("{word}");
-	// 	}
-	// }
-
-	let valid_words={
-		let mut words=Words::new();
-		// sort all words and make them lowercase
-		for mut word in letter_boxed.dictionary{
-			word.make_ascii_lowercase();
-			if let Some(first_letter)=word.chars().next(){
-				let letter_id=(first_letter as u8-b'a') as usize;
-				words.starting_letter[letter_id].push(word);
+	let valid_words=match dictionary{
+		Some(word_iter)=>{
+			// generate a tree of which letter choices lead to coherent words
+			// choosing a specific letter may never lead to any real word
+			let word_map=generate_tree(word_iter);
+			let words=find_valid_words(&word_map,&todays_puzzle);
+			words
+		},
+		None=>{
+			// use official accepted word list
+			let mut words=Words::new();
+			// sort all words and make them lowercase
+			for mut word in letter_boxed.dictionary{
+				word.make_ascii_lowercase();
+				if let Some(first_letter)=word.chars().next(){
+					let letter_id=(first_letter as u8-b'a') as usize;
+					words.starting_letter[letter_id].push(word);
+				}
 			}
+			words
 		}
-		words
 	};
 
 	let solutions=find_solutions(&valid_words, &todays_puzzle);
 
-	let time_find_solutions=time_2.elapsed();
-	let time_total=start_time.elapsed();
-
-	// println!("generate word tree: {time_generate_word_map:?}");
-	// println!("find valid words: {time_find_valid_words:?}");
-	println!("find solutions: {time_find_solutions:?}");
-	println!("total elapsed: {time_total:?}");
 	for [word1,word2] in solutions{
 		println!("{word1} - {word2}");
 	}
