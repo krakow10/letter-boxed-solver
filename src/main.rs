@@ -15,11 +15,13 @@ struct Cli{
 #[derive(Subcommand)]
 enum Commands{
 	Today(TodayCommand),
+	Solve(SolveCommand),
 }
 
 fn main(){
 	match Cli::parse().command{
 		Commands::Today(command)=>command.run(),
+		Commands::Solve(command)=>command.run(),
 	}
 }
 
@@ -42,6 +44,42 @@ impl TodayCommand{
 	}
 }
 
+/// Enter a puzzle and solve it with the specified dictionary.
+#[derive(Args)]
+struct SolveCommand{
+	#[arg(long,short)]
+	dictionary:PathBuf,
+	sides:Vec<String>,
+}
+impl SolveCommand{
+	fn run(self){
+		// there must be 4 sides with 3 chars each
+		if self.sides.len()!=4
+		|| self.sides.iter().any(|side|side.len()!=3){
+			println!("Invalid puzzle.  Write sides like ABC DEF GHI JKL");
+			return;
+		}
+		// load the dictionary
+		let dictionary=std::fs::read_to_string(self.dictionary).unwrap();
+
+		// generate the word tree
+		let word_map=generate_tree(dictionary.lines());
+
+		// construct the puzzle from the input
+		let mut sides_iter=self.sides.into_iter();
+		let sides=core::array::from_fn(|_|sides_iter.next().unwrap());
+		let puzzle=Puzzle::from_sides(sides);
+
+		// solve the puzzle
+		let valid_words=find_valid_words(&word_map,&puzzle);
+		let solutions=find_solutions(&valid_words,&puzzle);
+
+		// print solutions
+		for [word1,word2] in solutions{
+			println!("{word1} - {word2}");
+		}
+	}
+}
 
 #[derive(Debug,Clone)]
 struct LetterMap{
