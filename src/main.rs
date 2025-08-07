@@ -17,6 +17,12 @@ enum Commands{
 	Today(TodayCommand),
 }
 
+fn main(){
+	match Cli::parse().command{
+		Commands::Today(command)=>command.run(),
+	}
+}
+
 /// Fetch today's puzzle and solve it with the specified dictionary.
 /// Uses the official word list if no dictionary is provided.
 #[derive(Args)]
@@ -24,13 +30,6 @@ struct TodayCommand{
 	#[arg(long,short)]
 	dictionary:Option<PathBuf>,
 }
-
-fn main(){
-	match Cli::parse().command{
-		Commands::Today(command)=>command.run(),
-	}
-}
-
 impl TodayCommand{
 	fn run(self){
 		let dictionary=self.dictionary.map(|file_path|{
