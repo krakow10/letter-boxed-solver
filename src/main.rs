@@ -1,6 +1,41 @@
 #[cfg(feature="fetcher")]
 mod fetcher;
 
+use std::path::PathBuf;
+use clap::{Args, Parser, Subcommand};
+
+#[derive(clap::Parser)]
+#[command(author,version,about,long_about=None)]
+#[command(propagate_version=true)]
+struct Cli{
+	#[command(subcommand)]
+	command:Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands{
+	Today(TodayCommand),
+}
+
+/// Print the details for an asset
+#[derive(Args)]
+struct TodayCommand{
+	#[arg(long,short)]
+	dictionary:Option<PathBuf>,
+}
+
+fn main(){
+	match Cli::parse().command{
+		Commands::Today(command)=>command.run(),
+	}
+}
+
+impl TodayCommand{
+	fn run(self){
+	}
+}
+
+
 #[derive(Debug,Clone)]
 struct LetterMap{
 	next_letter:[Option<Box<LetterMap>>;26],
@@ -221,7 +256,7 @@ fn find_solutions<'a>(valid_words:&'a Words,puzzle:&Puzzle)->Vec<[&'a str;2]>{
 	solutions
 }
 
-fn main() {
+fn fetch_and_solve_with_dictionary(dictionary:Option<&str>) {
 	let letter_boxed=fetcher::get_today().unwrap();
 
 	// const WORDS:&str=include_str!("words.txt");
